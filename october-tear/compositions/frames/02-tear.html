@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="UTF-8" /><title>02-tear</title></head>
+<body>
+<template>
+  <style>
+@font-face{font-family:"Pretendard";src:url("assets/fonts/Pretendard-subset.woff2") format("woff2");font-weight:100 900;font-display:block;}
+#stage{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;background:#111111;font-family:"Pretendard",sans-serif;word-break:keep-all;}
+#g1{position:absolute;inset:0;}
+#g1_ink{position:absolute;inset:0;background:#111111;}
+#g1_shake{position:absolute;inset:0;}
+#g1_tear{position:absolute;inset:0;}
+.g1_sheet{position:absolute;left:0;top:0;width:1920px;height:1080px;background:#F0ECE5;display:flex;align-items:center;justify-content:center;}
+.g1_word{font-family:"Pretendard",sans-serif;font-weight:350;font-size:220px;line-height:1;letter-spacing:30px;padding-left:30px;color:#111111;white-space:nowrap;}
+#g1_crack{position:absolute;left:0;top:540px;width:1920px;height:1px;background:#111111;transform-origin:50% 50%;}
+#g1_punch{position:absolute;inset:0;transform-origin:50% 50%;}
+.g1_jw{position:absolute;left:960px;top:540px;width:0;height:0;}
+.g1_jg{position:absolute;left:0;top:0;display:block;font-family:"Pretendard",sans-serif;font-weight:900;line-height:1;color:#F0ECE5;white-space:nowrap;}
+#g1_flash{position:absolute;inset:0;background:#E85D26;opacity:0;}
+  </style>
+  <div id="stage" data-composition-id="02-tear" data-width="1920" data-height="1080" data-duration="1.254">
+    <div id="g1">
+      <div id="g1_ink"></div>
+      <div id="g1_shake" data-layout-allow-overflow>
+        <div id="g1_tear" data-layout-allow-overflow>
+          <div class="g1_sheet" id="g1_whole"><div class="g1_word">고요</div></div>
+          <div class="g1_sheet" id="g1_top" data-layout-allow-overflow><div class="g1_word">고요</div></div>
+          <div class="g1_sheet" id="g1_bot" data-layout-allow-overflow><div class="g1_word">고요</div></div>
+          <div id="g1_crack"></div>
+        </div>
+        <div id="g1_punch" data-layout-allow-overflow data-layout-allow-overlap>
+          <div class="g1_jw" id="g1_jw0"><div class="g1_jg" id="g1_j0" style="font-size:680px">ㄱ</div></div>
+          <div class="g1_jw" id="g1_jw1"><div class="g1_jg" id="g1_j1" style="font-size:560px">ㅗ</div></div>
+          <div class="g1_jw" id="g1_jw2"><div class="g1_jg" id="g1_j2" style="font-size:640px">ㅇ</div></div>
+          <div class="g1_jw" id="g1_jw3"><div class="g1_jg" id="g1_j3" style="font-size:600px">ㅛ</div></div>
+        </div>
+      </div>
+      <div id="g1_flash"></div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      // Frame-local time = track time - 4.946.
+      var DUR = 1.254;
+      var F = 1 / 30;
+      var T_RIP = 0.06;     // crack reaches full width, sheet splits
+      var T_HIT = 0.344;    // track 5.29: audible rip peak + first kick
+      var T_SNARE = 0.743;  // track 5.689: snare (the 5.759 anchor lags ~70ms)
+      var T_HAT = 0.952;    // track 5.898: hihat
+
+      // Seeded hash (no runtime randomness): same index -> same value.
+      function h(i, s) { var v = Math.sin(i * 12.9898 + s * 78.233) * 43758.5453; return v - Math.floor(v); }
+
+      // Jagged tear edge shared by both halves.
+      var edge = [];
+      for (var x = -40, i = 0; x <= 1960; x += 32, i++) {
+        var y = 540 + (h(i, 1) - 0.5) * 22 + (i % 5 === 2 ? (h(i, 2) - 0.5) * 20 : 0);
+        edge.push(x.toFixed(1) + "px " + y.toFixed(1) + "px");
+      }
+      var topPoly = "polygon(-40px -60px, 1960px -60px, " + edge.slice().reverse().join(", ") + ")";
+      var botPoly = "polygon(" + edge.join(", ") + ", 1960px 1140px, -40px 1140px)";
+      document.getElementById("g1_top").style.clipPath = topPoly;
+      document.getElementById("g1_bot").style.clipPath = botPoly;
+
+      var tl = gsap.timeline({ paused: true });
+
+      // ---- group visibility (the whole frame is one group) ----
+      tl.set("#g1", { autoAlpha: 1 }, 0);
+
+      // ---- start state: matches frame 1's last frame ----
+      tl.set("#g1_whole", { autoAlpha: 1 }, 0);
+      gsap.set(["#g1_top", "#g1_bot"], { autoAlpha: 0, x: 0, y: 0, rotation: 0 });
+      tl.set("#g1_crack", { autoAlpha: 1, scaleX: 0.4 }, 0);
+      tl.set("#g1_tear", { autoAlpha: 1, x: 0, y: 0 }, 0);
+      tl.set("#g1_flash", { opacity: 0 }, 0);
+      tl.set("#g1_shake", { x: 0, y: 0 }, 0);
+      tl.set("#g1_punch", { scale: 1 }, 0);
+
+      // ---- rip: crack runs to the edges, then the sheet splits along a jagged edge ----
+      tl.fromTo("#g1_crack", { scaleX: 0.4 }, { scaleX: 1, duration: T_RIP, ease: "power2.in" }, 0);
+      tl.set(["#g1_whole", "#g1_crack"], { autoAlpha: 0 }, T_RIP);
+      tl.set(["#g1_top", "#g1_bot"], { autoAlpha: 1 }, T_RIP);
+      tl.fromTo("#g1_top", { x: 0, y: -3, rotation: 0 },
+        { x: -10, y: -48, rotation: -0.7, duration: T_HIT - T_RIP, ease: "power3.in" }, T_RIP);
+      tl.fromTo("#g1_bot", { x: 0, y: 3, rotation: 0 },
+        { x: 12, y: 54, rotation: 0.6, duration: T_HIT - T_RIP, ease: "power3.in" }, T_RIP);
+
+      // tremor that grows into the hit (frame-stepped, seeded)
+      var nTrem = Math.floor((T_HIT - F) / F);
+      for (var k = 1; k <= nTrem; k++) {
+        var amp = 1 + 5 * (k / nTrem);
+        tl.set("#g1_tear", { x: (h(k, 3) - 0.5) * 2 * amp, y: (h(k, 4) - 0.5) * 2 * amp }, k * F);
+      }
+
+      // ---- system-replace at the hit: 0ms cut to ink, one-frame orange flash ----
+      tl.set("#g1_tear", { autoAlpha: 0 }, T_HIT);
+      tl.set("#g1_flash", { opacity: 1 }, T_HIT);
+      tl.set("#g1_flash", { opacity: 0 }, T_HIT + F);
+
+      // ---- jamo: start inside the word's footprint, fly outward huge and cropped ----
+      var J = [
+        // start x,y (relative to center), start scale, fly target x,y,rot, drift dx,dy,drot
+        { sx: -128, sy: -38, ss: 0.15, tx: -790, ty: -360, tr: -16, dx: -42, dy: -18, dr: -4 },
+        { sx: -118, sy: 58,  ss: 0.18, tx: -580, ty: 430,  tr: 12,  dx: -30, dy: 26,  dr: 3 },
+        { sx: 122,  sy: -40, ss: 0.15, tx: 770,  ty: -380, tr: 24,  dx: 44,  dy: -22, dr: 5 },
+        { sx: 122,  sy: 60,  ss: 0.16, tx: 650,  ty: 440,  tr: -10, dx: 34,  dy: 22,  dr: -3 }
+      ];
+      J.forEach(function (j, n) {
+        var g = "#g1_j" + n, w = "#g1_jw" + n;
+        tl.set(g, { xPercent: -50, yPercent: -50, autoAlpha: 0, x: j.sx, y: j.sy, scale: j.ss, rotation: 0 }, 0);
+        tl.set(w, { x: 0, y: 0, rotation: 0 }, 0);
+        tl.set(g, { autoAlpha: 1 }, T_HIT);
+        tl.fromTo(g, { x: j.sx, y: j.sy, scale: j.ss, rotation: 0 },
+          { x: j.tx, y: j.ty, scale: 1, rotation: j.tr, duration: 0.42 + n * 0.02, ease: "expo.out" }, T_HIT);
+        // continuous drift that frame 3 inherits
+        tl.fromTo(w, { x: 0, y: 0, rotation: 0 },
+          { x: j.dx, y: j.dy, rotation: j.dr, duration: DUR - T_HIT, ease: "none" }, T_HIT);
+      });
+
+      // ---- screen-shake on the hit and on the snare ----
+      function shake(t0, amps) {
+        amps.forEach(function (a, q) {
+          tl.set("#g1_shake", { x: a, y: a * 0.65 * (q % 2 ? 1 : -1) }, t0 + q * F);
+        });
+        tl.set("#g1_shake", { x: 0, y: 0 }, t0 + amps.length * F);
+      }
+      shake(T_HIT, [30, -26, 22, -18, 14, -10, 6, -3]);
+      shake(T_SNARE, [18, -15, 11, -7, 4]);
+      shake(T_HAT, [6, -4]);
+
+      // ---- braam-punch on the snare: the jamo field kicks and settles (no ease on the hit) ----
+      tl.set("#g1_punch", { scale: 1.07 }, T_SNARE);
+      tl.to("#g1_punch", { scale: 1, duration: 0.22, ease: "power3.out" }, T_SNARE);
+
+      tl.set("#g1", { autoAlpha: 0 }, DUR);
+
+      window.__timelines["02-tear"] = tl;
+      tl.seek(0);
+    })();
+  </script>
+</template>
+</body>
+</html>

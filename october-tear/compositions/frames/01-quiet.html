@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="UTF-8" /><title>01-quiet</title></head>
+<body>
+<template>
+  <style>
+@font-face{font-family:"Pretendard";src:url("assets/fonts/Pretendard-subset.woff2") format("woff2");font-weight:100 900;font-display:block;}
+#root{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;background:#F0ECE5;color:#111111;font-family:"Pretendard",sans-serif;container-type:size;}
+#g1{position:absolute;inset:0;width:100%;height:100%;box-sizing:border-box;}
+#g1_center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;}
+#g1_word{display:flex;align-items:center;justify-content:center;gap:70px;font-family:"Pretendard",sans-serif;font-size:220px;font-weight:100;line-height:1;color:#111111;opacity:0.35;white-space:nowrap;word-break:keep-all;}
+#g1_word .g1_ch{display:inline-block;will-change:transform;}
+#g1_crack{position:absolute;left:50%;top:50%;width:760px;height:12px;margin-left:-380px;margin-top:-6px;overflow:visible;}
+#g1_crack path{fill:none;stroke:#111111;stroke-width:1.2;stroke-linecap:square;stroke-linejoin:miter;}
+.g1_label{position:absolute;bottom:59px;font-family:"IBM Plex Mono","Pretendard",monospace;font-size:18px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;white-space:nowrap;line-height:1;}
+#g1_date{left:106px;color:#505048;}
+#g1_secs{position:relative;display:inline-block;width:1.4em;height:1em;vertical-align:top;}
+#g1_secs .g1_s{position:absolute;left:0;top:0;color:#111111;opacity:0;}
+#g1_secs #g1_s0{opacity:1;}
+#g1_place{right:106px;color:#505048;}
+  </style>
+  <div id="root" data-composition-id="01-quiet" data-width="1920" data-height="1080" data-duration="4.946">
+    <div id="g1">
+      <div id="g1_center">
+        <div id="g1_word"><span class="g1_ch" id="g1_c0">고</span><span class="g1_ch" id="g1_c1">요</span></div>
+        <svg id="g1_crack" width="760" height="12" viewBox="0 0 760 12"><path id="g1_crackpath" d="M0 6.0 L58 5.6 L121 6.5 L176 5.3 L240 6.2 L297 6.9 L352 5.5 L418 6.1 L470 5.0 L533 6.4 L590 5.7 L648 6.6 L703 5.8 L760 6.1" stroke-dasharray="800 800" stroke-dashoffset="800"/></svg>
+      </div>
+      <div class="g1_label" id="g1_date">10.30 · 06:47:<span id="g1_secs"><span class="g1_s" id="g1_s0">00</span><span class="g1_s" id="g1_s1">01</span><span class="g1_s" id="g1_s2">02</span><span class="g1_s" id="g1_s3">03</span><span class="g1_s" id="g1_s4">04</span></span></div>
+      <div class="g1_label" id="g1_place">06:47 AM · SEOUL</div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var tl = gsap.timeline({ paused: true });
+      var END = 4.946;
+      var RISE = 2.8;      // riser swell begins
+      var LAND = 4.92;     // resolved end state, just inside the half-open window
+
+      // group window (g1 spans the whole frame)
+      tl.set("#g1", { autoAlpha: 1 }, 0);
+
+      // --- negative-space hold: the word barely breathes (0 → 2.8s) ---
+      tl.fromTo("#g1_word", { opacity: 0.35 }, { opacity: 1, duration: 1.53, ease: "sine.inOut", immediateRender: false }, 0.07);
+      tl.fromTo("#g1_word", { gap: 74 }, { gap: 70, duration: RISE, ease: "sine.inOut" }, 0);
+
+      // --- tension (riser, 2.8 → 4.92s): weight creeps 100 → 350, tracking tightens ---
+      tl.fromTo("#g1_word", { fontWeight: 100 }, { fontWeight: 350, duration: LAND - RISE, ease: "power2.in", immediateRender: false }, RISE);
+      tl.fromTo("#g1_word", { gap: 70 }, { gap: 30, duration: LAND - RISE, ease: "power2.in", immediateRender: false }, RISE);
+
+      // --- tremor: text-wave-distort reduced to a 1-2px seek-safe shiver, derived from indices ---
+      var DT = 1 / 30;
+      var steps = Math.floor((LAND - RISE) / DT);
+      for (var c = 0; c < 2; c++) {
+        var id = "#g1_c" + c;
+        tl.set(id, { x: 0, y: 0 }, 0);
+        for (var k = 1; k <= steps; k++) {
+          var p = k / steps;
+          var amp = 2 * p * p;
+          var x = amp * Math.sin(k * 2.7 + c * 1.3);
+          var y = amp * 0.6 * Math.cos(k * 3.1 + c * 0.9);
+          tl.to(id, { x: x, y: y, duration: DT, ease: "none" }, RISE + (k - 1) * DT);
+        }
+      }
+
+      // --- hairline crack drawn horizontally through the word (4.4 → 4.92s) ---
+      tl.fromTo("#g1_crackpath", { strokeDashoffset: 800 }, { strokeDashoffset: 0, duration: LAND - 4.4, ease: "power1.in" }, 4.4);
+
+      // --- clock: seconds digits advance by 0ms swaps on each tick anchor ---
+      var ticks = [0, 1.068, 2.067, 3.065, 4.063];
+      for (var i = 1; i < ticks.length; i++) {
+        tl.set("#g1_s" + i, { opacity: 1 }, ticks[i]);
+        tl.set("#g1_s" + (i - 1), { opacity: 0 }, ticks[i]);
+      }
+
+      tl.set("#g1", { autoAlpha: 0 }, END);
+
+      window.__timelines["01-quiet"] = tl;
+      tl.seek(0);
+    })();
+  </script>
+</template>
+</body>
+</html>
